@@ -1,14 +1,10 @@
-%global with_python3 1
-
-%{?filter_setup:
-%filter_provides_in %{python_sitearch}/.*\.so$
-%filter_provides_in %{python3_sitearch}/.*\.so$
-%filter_setup}
+%{?scl:%scl_package python-numexpr}
+%{!?scl:%global pkg_name %{name}}
 
 %global	module	numexpr
 
 Summary:	Fast numerical array expression evaluator for Python and NumPy
-Name:		python-%{module}
+Name:		%{?scl_prefix}python-%{module}
 Version:	2.3
 Release:	3%{?dist}
 Source0:	https://github.com/pydata/numexpr/archive/%{module}-%{version}.tar.gz
@@ -16,13 +12,13 @@ License:	MIT
 Group:		Development/Languages
 URL:		http://numexpr.googlecode.com/
 
-Requires:	numpy >= 1.6
-BuildRequires:	numpy >= 1.6
-BuildRequires:	python2-devel
-%if 0%{?with_python3}
-BuildRequires:	python3-devel
-BuildRequires:	python3-numpy
-%endif # with_python3
+Requires:	%{?scl_prefix}numpy
+%{?scl:Requires: %{scl}-runtime}
+BuildRequires:  %{?scl_prefix}numpy
+BuildRequires:  %{?scl_prefix}python-devel
+BuildRequires:  gcc-c++
+%{?scl:BuildRequires: %{scl}-build %{scl}-runtime}
+BuildRoot: %{_tmppath}/%{pkg_name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
 The numexpr package evaluates multiple-operator array expressions many
@@ -32,80 +28,42 @@ Python code on the fly. It’s the next best thing to writing the
 expression in C and compiling it with a specialized just-in-time (JIT)
 compiler, i.e. it does not require a compiler at runtime.
 
-%if 0%{?with_python3}
-%package -n python3-%{module}
-Summary:	Fast numerical array expression evaluator for Python and NumPy
-Requires:	python3-numpy >= 1.6
-
-%description -n python3-%{module}
-The numexpr package evaluates multiple-operator array expressions many
-times faster than NumPy can. It accepts the expression as a string,
-analyzes it, rewrites it more efficiently, and compiles it to faster
-Python code on the fly. It’s the next best thing to writing the
-expression in C and compiling it with a specialized just-in-time (JIT)
-compiler, i.e. it does not require a compiler at runtime.
-
-This is the version for Python 3.
-%endif # with_python3
-
-
 %prep
 %setup -q -n %{module}-%{version}
 
 sed -i "s|/usr/bin/env |/usr/bin/|" %{module}/cpuinfo.py
 
-%if 0%{?with_python3}
-rm -rf %{py3dir}
-cp -a . %{py3dir}
-%endif # with_python3
-
 %build
-python setup.py build
-%if 0%{?with_python3}
-pushd %{py3dir}
-python3 setup.py build
-popd
-%endif # with_python3
+%{?scl:scl enable %{scl} - << \EOF}
+CFLAGS="$RPM_OPT_FLAGS" %{__python3} setup.py build
+%{?scl:EOF}
 
 %check
 libdir=`ls build/|grep lib`
 pushd "build/$libdir"
-python -c 'import numexpr; numexpr.test()'
+%{?scl:scl enable %{scl} "}
+%{__python3} -c 'import numexpr; numexpr.test()'
+%{?scl:"}
 popd
-
-%if 0%{?with_python3}
-pushd %{py3dir}
-libdir=`ls build/|grep lib`
-cd "build/$libdir"
-python3 -c 'import numexpr; numexpr.test()'
-popd
-%endif # with_python3
 
 %install
-python setup.py install -O1 --skip-build --root=%{buildroot}
+%{?scl:scl enable %{scl} "}
+%{__python3} setup.py install -O1 --skip-build --root %{buildroot}
+%{?scl:"}
 #This could be done more properly ?
-chmod 0644 %{buildroot}%{python_sitearch}/%{module}/cpuinfo.py
-chmod 0755 %{buildroot}%{python_sitearch}/%{module}/*.so
+chmod 0644 %{buildroot}%{python3_sitearch}/%{module}/cpuinfo.py
+chmod 0755 %{buildroot}%{python3_sitearch}/%{module}/*.so
 
-%if 0%{?with_python3}
-pushd %{py3dir}
-python3 setup.py install -O1 --skip-build --root=%{buildroot}
-popd
-%endif # with_python3
 
 %files
 %doc ANNOUNCE.rst LICENSE.txt RELEASE_NOTES.rst README.rst
-%{python_sitearch}/numexpr/
-%{python_sitearch}/numexpr-%{version}-py*.egg-info/
-
-%if 0%{?with_python3}
-%files -n python3-%{module}
-%doc ANNOUNCE.rst LICENSE.txt RELEASE_NOTES.rst README.rst
 %{python3_sitearch}/numexpr/
-%{python3_sitearch}/numexpr-%{version}-py*.egg-info
-%endif # with_python3
+%{python3_sitearch}/numexpr-%{version}-py*.egg-info/
 
 %changelog
+* Sat Aug 16 2014 Dmitrijs Milajevs <dimazest@gmail.com> - 2.3-4
+- Cleanup and adoptations for Software collections.
+
 * Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.3-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
 
