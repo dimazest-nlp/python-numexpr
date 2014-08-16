@@ -6,7 +6,7 @@
 Summary:	Fast numerical array expression evaluator for Python and NumPy
 Name:		%{?scl_prefix}python-%{module}
 Version:	2.3
-Release:	3%{?dist}
+Release:	1%{?dist}
 Source0:	https://github.com/pydata/numexpr/archive/%{module}-%{version}.tar.gz
 License:	MIT
 Group:		Development/Languages
